@@ -85,6 +85,8 @@ to_json(Req, #{room := Room} = State) ->
     Users = maps:get(users, Room),
     Resp = #{name => proplists:get_value(roomname, Config),
              subject => proplists:get_value(subject, Config),
+             image => proplists:get_value(image, Config),
+             tags => proplists:get_value(tags, Config),
              participants => [user_to_json(U) || U <- Users]
             },
     {jiffy:encode(Resp), Req, State};
@@ -98,7 +100,9 @@ get_room_details({RoomID, _} = RoomUS) ->
         {ok, Config, _} ->
             #{id => RoomID,
               name => proplists:get_value(roomname, Config),
-              subject => proplists:get_value(subject, Config)};
+              subject => proplists:get_value(subject, Config),
+              image => proplists:get_value(image, Config),
+              tags => proplists:get_value(tags, Config)};
         _ ->
             []
     end.
@@ -111,8 +115,8 @@ from_json(Req, State) ->
 
 handle_request(<<"POST">>, JSONData, Req,
                #{user := User, jid := #jid{lserver = Server}} = State) ->
-    #{<<"name">> := RoomName, <<"subject">> := Subject} = JSONData,
-    case mod_muc_light_commands:create_unique_room(Server, RoomName, User, Subject) of
+    #{<<"name">> := RoomName, <<"subject">> := Subject, <<"image">> := Image, <<"tags">> := Tags} = JSONData,
+    case mod_muc_light_commands:create_unique_room(Server, RoomName, User, Subject, Image, Tags) of
         {error, _} ->
             {false, Req, State};
         Room ->
