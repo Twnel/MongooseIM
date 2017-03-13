@@ -23,6 +23,7 @@
 -export([start/2, stop/1]).
 
 -export([create_unique_room/6]).
+-export([update_room/7]).
 -export([send_message/4]).
 -export([invite_to_room/4]).
 -export([change_affiliation/5]).
@@ -115,6 +116,19 @@ create_unique_room(Domain, RoomName, Creator, Subject, Image, Tags) ->
     MUCService = jid:make(<<>>, MUCLightDomain, <<>>),
     Config = make_room_config(RoomName, Subject, Image, Tags),
     case mod_muc_light:try_to_create_room(C, MUCService, Config) of
+        {ok, RoomUS, _} ->
+            jid:to_binary(RoomUS);
+        {error, _Reason} = E ->
+            E
+    end.
+
+update_room(Id, Domain, RoomName, Creator, Subject, Image, Tags) ->
+    C = jid:to_lus(jid:from_binary(Creator)),
+    MUCLightDomain = gen_mod:get_module_opt_subhost(
+                       Domain, mod_muc_light, mod_muc_light:default_host()),
+    MUCService = jid:make(Id, MUCLightDomain, <<>>),
+    Config = make_room_config(RoomName, Subject, Image, Tags),
+    case mod_muc_light:try_to_update_room(C, MUCService, Config) of
         {ok, RoomUS, _} ->
             jid:to_binary(RoomUS);
         {error, _Reason} = E ->

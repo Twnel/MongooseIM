@@ -37,7 +37,7 @@ content_types_accepted(Req, State) ->
      ], Req, State}.
 
 allowed_methods(Req, State) ->
-    {[<<"OPTIONS">>, <<"GET">>, <<"POST">>], Req, State}.
+    {[<<"OPTIONS">>, <<"GET">>, <<"POST">>, <<"PUT">>], Req, State}.
 
 resource_exists(Req, #{jid := #jid{lserver = Server}} = State) ->
     {RoomID, Req2} = cowboy_req:binding(id, Req),
@@ -117,6 +117,19 @@ handle_request(<<"POST">>, JSONData, Req,
                #{user := User, jid := #jid{lserver = Server}} = State) ->
     #{<<"name">> := RoomName, <<"subject">> := Subject, <<"image">> := Image, <<"tags">> := Tags} = JSONData,
     case mod_muc_light_commands:create_unique_room(Server, RoomName, User, Subject, Image, Tags) of
+        {error, _} ->
+            {false, Req, State};
+        Room ->
+            RoomJID = jid:from_binary(Room),
+            RespBody = #{<<"id">> => RoomJID#jid.luser},
+            RespReq = cowboy_req:set_resp_body(jiffy:encode(RespBody), Req),
+            {true, RespReq, State}
+    end;
+
+handle_request(<<"PUT">>, JSONData, Req,
+               #{user := User, jid := #jid{lserver = Server}} = State) ->
+    #{<<"id">> := RoomId, <<"name">> := RoomName, <<"subject">> := Subject, <<"image">> := Image, <<"tags">> := Tags} = JSONData,
+    case mod_muc_light_commands:update_room(RoomId, Server, RoomName, User, Subject, Image, Tags) of
         {error, _} ->
             {false, Req, State};
         Room ->

@@ -35,6 +35,10 @@
                       AffUsers :: aff_users(), Version :: binary()) ->
     {ok, FinalRoomUS :: ejabberd:simple_bare_jid()} | {error, exists}.
 
+-callback update_room(RoomUS :: ejabberd:simple_bare_jid(), Config :: config(),
+                      AffUsers :: aff_users(), Version :: binary()) ->
+    {ok, FinalRoomUS :: ejabberd:simple_bare_jid()} | {error, exists}.
+
 -callback destroy_room(RoomUS :: ejabberd:simple_bare_jid()) -> ok | {error, not_exists}.
 
 -callback room_exists(RoomUS :: ejabberd:simple_bare_jid()) -> boolean().
