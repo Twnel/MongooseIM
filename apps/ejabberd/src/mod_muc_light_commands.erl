@@ -22,8 +22,8 @@
 -behaviour(gen_mod).
 -export([start/2, stop/1]).
 
--export([create_unique_room/6]).
--export([update_room/7]).
+-export([create_unique_room/7]).
+-export([update_room/8]).
 -export([send_message/4]).
 -export([invite_to_room/4]).
 -export([change_affiliation/5]).
@@ -67,7 +67,8 @@ commands() ->
         {owner, binary},
         {subject, binary},
         {image, binary},
-        {tags, binary}
+        {tags, binary},
+        {country, binary}
        ]},
       {result, {name, binary}}],
 
@@ -109,12 +110,12 @@ commands() ->
 %% Internal procedures
 %%--------------------------------------------------------------------
 
-create_unique_room(Domain, RoomName, Creator, Subject, Image, Tags) ->
+create_unique_room(Domain, RoomName, Creator, Subject, Image, Tags, Country) ->
     C = jid:to_lus(jid:from_binary(Creator)),
     MUCLightDomain = gen_mod:get_module_opt_subhost(
                        Domain, mod_muc_light, mod_muc_light:default_host()),
     MUCService = jid:make(<<>>, MUCLightDomain, <<>>),
-    Config = make_room_config(RoomName, Subject, Image, Tags),
+    Config = make_room_config(RoomName, Subject, Image, Tags, Country),
     case mod_muc_light:try_to_create_room(C, MUCService, Config) of
         {ok, RoomUS, _} ->
             jid:to_binary(RoomUS);
@@ -122,12 +123,12 @@ create_unique_room(Domain, RoomName, Creator, Subject, Image, Tags) ->
             E
     end.
 
-update_room(Id, Domain, RoomName, Creator, Subject, Image, Tags) ->
+update_room(Id, Domain, RoomName, Creator, Subject, Image, Tags, Country) ->
     C = jid:to_lus(jid:from_binary(Creator)),
     MUCLightDomain = gen_mod:get_module_opt_subhost(
                        Domain, mod_muc_light, mod_muc_light:default_host()),
     MUCService = jid:make(Id, MUCLightDomain, <<>>),
-    Config = make_room_config(RoomName, Subject, Image, Tags),
+    Config = make_room_config(RoomName, Subject, Image, Tags, Country),
     case mod_muc_light:try_to_update_room(C, MUCService, Config) of
         {ok, RoomUS, _} ->
             jid:to_binary(RoomUS);
@@ -179,11 +180,12 @@ send_message(Domain, RoomName, Sender, Message) ->
 %% Ancillary
 %%--------------------------------------------------------------------
 
-make_room_config(Name, Subject, Image, Tags) ->
+make_room_config(Name, Subject, Image, Tags, Country) ->
     #create{raw_config = [{<<"roomname">>, Name},
                           {<<"subject">>, Subject},
                           {<<"image">>, Image},
-                          {<<"tags">>, Tags}]
+                          {<<"tags">>, Tags},
+                          {<<"country">>, Country}]
            }.
 
 muc_light_room_name_to_jid(Participant, RoomName, Domain) ->
