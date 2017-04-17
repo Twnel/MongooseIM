@@ -88,6 +88,7 @@ to_json(Req, #{room := Room} = State) ->
              image => proplists:get_value(image, Config),
              tags => proplists:get_value(tags, Config),
              country => proplists:get_value(country, Config),
+             company => proplists:get_value(company, Config),
              participants => [user_to_json(U) || U <- Users]
             },
     {jiffy:encode(Resp), Req, State};
@@ -104,7 +105,8 @@ get_room_details({RoomID, _} = RoomUS) ->
               subject => proplists:get_value(subject, Config),
               image => proplists:get_value(image, Config),
               tags => proplists:get_value(tags, Config),
-              country => proplists:get_value(country, Config)};
+              country => proplists:get_value(country, Config),
+              company => proplists:get_value(company, Config)};
         _ ->
             []
     end.
@@ -117,8 +119,8 @@ from_json(Req, State) ->
 
 handle_request(<<"POST">>, JSONData, Req,
                #{user := User, jid := #jid{lserver = Server}} = State) ->
-    #{<<"name">> := RoomName, <<"subject">> := Subject, <<"image">> := Image, <<"tags">> := Tags, <<"country">> := Country} = JSONData,
-    case mod_muc_light_commands:create_unique_room(Server, RoomName, User, Subject, Image, Tags, Country) of
+    #{<<"name">> := RoomName, <<"subject">> := Subject, <<"image">> := Image, <<"tags">> := Tags, <<"country">> := Country, <<"company">> := Company} = JSONData,
+    case mod_muc_light_commands:create_unique_room(Server, RoomName, User, Subject, Image, Tags, Country, Company) of
         {error, _} ->
             {false, Req, State};
         Room ->
@@ -130,8 +132,8 @@ handle_request(<<"POST">>, JSONData, Req,
 
 handle_request(<<"PUT">>, JSONData, Req,
                #{user := User, jid := #jid{lserver = Server}} = State) ->
-    #{<<"id">> := RoomId, <<"name">> := RoomName, <<"subject">> := Subject, <<"image">> := Image, <<"tags">> := Tags, <<"country">> := Country} = JSONData,
-    case mod_muc_light_commands:update_room(RoomId, Server, RoomName, User, Subject, Image, Tags, Country) of
+    #{<<"id">> := RoomId, <<"name">> := RoomName, <<"subject">> := Subject, <<"image">> := Image, <<"tags">> := Tags, <<"country">> := Country, <<"company">> := Company} = JSONData,
+    case mod_muc_light_commands:update_room(RoomId, Server, RoomName, User, Subject, Image, Tags, Country, Company) of
         {error, _} ->
             {false, Req, State};
         Room ->
