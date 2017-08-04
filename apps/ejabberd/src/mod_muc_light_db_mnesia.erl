@@ -30,6 +30,7 @@
          stop/2,
 
          create_room/4,
+         update_room/4,
          destroy_room/1,
          room_exists/1,
          get_user_rooms/2,
@@ -100,6 +101,14 @@ stop(_Host, _MUCHost) ->
                   AffUsers :: aff_users(), Version :: binary()) ->
     {ok, FinalRoomUS :: ejabberd:simple_bare_jid()} | {error, exists}.
 create_room(RoomUS, Config, AffUsers, Version) ->
+    {atomic, Res} = mnesia:transaction(fun create_room_transaction/4,
+                                       [RoomUS, Config, AffUsers, Version]),
+    Res.
+
+-spec update_room(RoomUS :: ejabberd:simple_bare_jid(), Config :: config(),
+                  AffUsers :: aff_users(), Version :: binary()) ->
+    {ok, FinalRoomUS :: ejabberd:simple_bare_jid()} | {error, exists}.
+update_room(RoomUS, Config, AffUsers, Version) ->
     {atomic, Res} = mnesia:transaction(fun create_room_transaction/4,
                                        [RoomUS, Config, AffUsers, Version]),
     Res.

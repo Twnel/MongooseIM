@@ -76,6 +76,7 @@
 
 %% For Administration API
 -export([try_to_create_room/3]).
+-export([try_to_update_room/3]).
 
 %% For propEr
 -export([apply_rsm/3]).
@@ -424,6 +425,35 @@ try_to_create_room(CreatorUS, RoomJID, #create{raw_config = RawConfig} = Creatio
         {{ok, Config0}, {ok, FinalAffUsers}} when length(FinalAffUsers) =< MaxOccupants ->
             Version = mod_muc_light_utils:bin_ts(),
             case mod_muc_light_db_backend:create_room(
+                   RoomUS, lists:sort(Config0), FinalAffUsers, Version) of
+                {ok, FinalRoomUS} ->
+                    {ok, FinalRoomUS, CreationCfg#create{
+                                        aff_users = FinalAffUsers, version = Version}};
+                Other ->
+                    Other
+            end;
+        {{error, _} = Error, _} ->
+            Error;
+        _ ->
+            {error, bad_request}
+    end.
+
+-spec try_to_update_room(CreatorUS :: ejabberd:simple_bare_jid(), RoomJID :: ejabberd:jid(),
+                         CreationCfg :: create_req_props()) ->
+    {ok, ejabberd:simple_bare_jid(), create_req_props()}
+    | {error, validation_error() | bad_request | exists}.
+try_to_update_room(CreatorUS, RoomJID, #create{raw_config = RawConfig} = CreationCfg) ->
+    {_RoomU, RoomS} = RoomUS = jid:to_lus(RoomJID),
+    InitialAffUsers = mod_muc_light_utils:filter_out_prevented(
+                        CreatorUS, RoomUS, CreationCfg#create.aff_users),
+    MaxOccupants = gen_mod:get_module_opt_by_subhost(
+                     RoomJID#jid.lserver, ?MODULE, max_occupants, ?DEFAULT_MAX_OCCUPANTS),
+    case {mod_muc_light_utils:process_raw_config(
+            RawConfig, default_config(RoomS), config_schema(RoomS)),
+          process_create_aff_users_if_valid(RoomS, CreatorUS, InitialAffUsers)} of
+        {{ok, Config0}, {ok, FinalAffUsers}} when length(FinalAffUsers) =< MaxOccupants ->
+            Version = mod_muc_light_utils:bin_ts(),
+            case mod_muc_light_db_backend:update_room(
                    RoomUS, lists:sort(Config0), FinalAffUsers, Version) of
                 {ok, FinalRoomUS} ->
                     {ok, FinalRoomUS, CreationCfg#create{
