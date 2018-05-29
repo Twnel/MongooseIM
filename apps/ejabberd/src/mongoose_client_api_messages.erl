@@ -14,6 +14,7 @@
 
 -export([maybe_integer_qs_val/1]).
 -export([maybe_before_to_us/2]).
+-export([maybe_after_to_us/2]).
 
 -include("ejabberd.hrl").
 -include("jlib.hrl").
@@ -54,6 +55,8 @@ maybe_to_json_with_jid(WithJID, #jid{lserver = Server} = JID, Req, State) ->
     ArchiveID = mod_mam:archive_id_int(Server, JID),
     {PageSize, Req2} = maybe_integer_qs_val(cowboy_req:qs_val(<<"limit">>, Req, <<"50">>)),
     {Before, Req3} = maybe_integer_qs_val(cowboy_req:qs_val(<<"before">>, Req2)),
+    {After, Req4} = maybe_integer_qs_val(cowboy_req:qs_val(<<"after">>, Req3)),
+    Start = maybe_after_to_us(After, Now),
     End = maybe_before_to_us(Before, Now),
     RSM = #rsm_in{direction = before, id = undefined},
     R = mod_mam:lookup_messages(Server,
@@ -61,7 +64,7 @@ maybe_to_json_with_jid(WithJID, #jid{lserver = Server} = JID, Req, State) ->
                                 _ArchiveJID = JID,
                                 RSM,
                                 _Borders = undefined,
-                                _Start = undefined,
+                                Start,
                                 End,
                                 Now,
                                 WithJID,
@@ -125,3 +128,7 @@ maybe_before_to_us(undefined, Now) ->
 maybe_before_to_us(Timestamp, _) ->
    Timestamp * 1000.
 
+maybe_after_to_us(undefined, Now) ->
+    undefined;
+maybe_after_to_us(Timestamp, _) ->
+   Timestamp * 1000.
