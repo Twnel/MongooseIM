@@ -616,6 +616,7 @@ end_per_group(Group, Config) ->
     B = basic_group(Group),
     Config1 = end_state(C, B, Config),
     Config2 = end_modules(C, B, Config1),
+    purge_params_modules(),
     escalus_fresh:clean(),
     delete_users(Config2).
 
@@ -1072,6 +1073,12 @@ stop_module(Host, Mod) ->
 just_stop_module(Host, Mod) ->
     {atomic, ok} = rpc_apply(gen_mod, stop_module, [Host, Mod]),
     ok.
+
+purge_params_modules() ->
+    rpc_apply(code, delete, [mod_mam_params]),
+    rpc_apply(code, purge, [mod_mam_params]),
+    rpc_apply(code, delete, [mod_mam_muc_params]),
+    rpc_apply(code, purge, [mod_mam_muc_params]).
 
 %%--------------------------------------------------------------------
 %% Group name helpers

@@ -87,6 +87,10 @@ to_json(Req, #{room := Room} = State) ->
     Users = maps:get(users, Room),
     Resp = #{name => proplists:get_value(roomname, Config),
              subject => proplists:get_value(subject, Config),
+             image => proplists:get_value(image, Config),
+             tags => proplists:get_value(tags, Config),
+             country => proplists:get_value(country, Config),
+             company => proplists:get_value(company, Config),
              participants => [user_to_json(U) || U <- Users]
             },
     {jiffy:encode(Resp), Req, State};
@@ -100,7 +104,11 @@ get_room_details({RoomID, _} = RoomUS) ->
         {ok, Config, _} ->
             #{id => RoomID,
               name => proplists:get_value(roomname, Config),
-              subject => proplists:get_value(subject, Config)};
+              subject => proplists:get_value(subject, Config),
+              image => proplists:get_value(image, Config),
+              tags => proplists:get_value(tags, Config),
+              country => proplists:get_value(country, Config),
+              company => proplists:get_value(company, Config)};
         _ ->
             []
     end.
@@ -125,16 +133,22 @@ handle_request(Method, JSONData, Req, State) ->
 handle_request_by_method(<<"POST">>, JSONData,
                          #{user := User, jid := #jid{lserver = Server}}) ->
     #{<<"name">>    := RoomName,
-      <<"subject">> := Subject} = JSONData,
-    mod_muc_light_commands:create_unique_room(Server, RoomName, User, Subject);
+      <<"subject">> := Subject,
+      <<"image">>   := Image,
+      <<"tags">>    := Tags,
+      <<"country">> := Country,
+      <<"company">> := Company} = JSONData,
+    mod_muc_light_commands:create_unique_room(Server, RoomName, User, Subject, Image, Tags, Country, Company);
 handle_request_by_method(<<"PUT">>, JSONData, State) ->
     #{user := User, jid := #jid{lserver = Server}, room_id := RoomID} = State,
-    #{<<"name">>    := RoomName, <<"subject">> := Subject} = JSONData,
-    mod_muc_light_commands:create_identifiable_room(Server,
-                                                    RoomID,
-                                                    RoomName,
-                                                    User,
-                                                    Subject).
+    #{<<"id">>      := RoomId,
+      <<"name">>    := RoomName,
+      <<"subject">> := Subject,
+      <<"image">>   := Image,
+      <<"tags">>    := Tags,
+      <<"country">> := Country,
+      <<"company">> := Company} = JSONData,
+    mod_muc_light_commands:update_room(RoomId, Server, RoomName, User, Subject, Image, Tags, Country, Company).
 
 user_to_json({UserServer, Role}) ->
     #{user => jid:to_binary(UserServer),

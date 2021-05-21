@@ -30,6 +30,7 @@
          stop/2,
 
          create_room/4,
+         update_room/4,
          destroy_room/1,
          room_exists/1,
          get_user_rooms/2,
@@ -90,6 +91,16 @@ create_room(RoomUS, Config, AffUsers, Version) ->
     {atomic, Res}
     = mongoose_rdbms:sql_transaction(
         MainHost, fun() -> create_room_transaction(RoomUS, Config, AffUsers, Version) end),
+    Res.
+
+-spec update_room(RoomUS :: ejabberd:simple_bare_jid(), Config :: config(),
+                  AffUsers :: aff_users(), Version :: binary()) ->
+    {ok, FinalRoomUS :: ejabberd:simple_bare_jid()} | {error, exists}.
+update_room(RoomUS, Config, AffUsers, Version) ->
+    MainHost = main_host(RoomUS),
+    {atomic, Res}
+    = mongoose_rdbms:sql_transaction(
+        MainHost, fun() -> update_room_transaction(RoomUS, Config, AffUsers, Version) end),
     Res.
 
 -spec destroy_room(RoomUS :: ejabberd:simple_bare_jid()) -> ok | {error, not_exists | not_empty}.
@@ -371,6 +382,26 @@ create_room_transaction({NodeCandidate, RoomS}, Config, AffUsers, Version) ->
               end, mod_muc_light_utils:config_to_raw(Config, mod_muc_light:config_schema(RoomS))),
             {ok, {RoomU, RoomS}}
     end.
+
+-spec update_room_transaction(RoomUS :: ejabberd:simple_bare_jid(),
+                              Config :: config(), AffUsers :: aff_users(),
+                              Version :: binary()) ->
+    {ok, FinalRoomUS :: ejabberd:simple_bare_jid()} | {error, exists}.
+update_room_transaction({RoomU, RoomS}, Config, AffUsers, Version) ->
+    {selected, [{RoomID}]} = mongoose_rdbms:sql_query_t(
+                                    mod_muc_light_db_odbc_sql:select_room_id(RoomU, RoomS)),
+    lists:foreach(
+        fun({{UserU, UserS}, Aff}) ->
+                {updated, _} = mongoose_rdbms:sql_query_t(
+                                mod_muc_light_db_odbc_sql:update_aff(
+                                    RoomID, UserU, UserS, Aff))
+        end, AffUsers),
+    lists:foreach(
+        fun({Key, Val}) ->
+                {updated, _} = mongoose_rdbms:sql_query_t(
+                                mod_muc_light_db_odbc_sql:update_config(RoomID, Key, Val))
+        end, mod_muc_light_utils:config_to_raw(Config, mod_muc_light:config_schema(RoomS))),
+    {ok, {RoomU, RoomS}}.
 
 -spec destroy_room_transaction(RoomUS :: ejabberd:simple_bare_jid()) -> ok | {error, not_exists}.
 destroy_room_transaction({RoomU, RoomS}) ->
